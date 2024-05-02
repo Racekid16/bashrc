@@ -190,6 +190,20 @@ user_deactivate() {
     sed -i "s/^USER_DEACTIVATED=.*$/USER_DEACTIVATED=1/" ~/.bashrc
     USER_DEACTIVATED=1
     $deactivate_copy
+    unalias deactivate
+    echo automatic virtual environment activation disabled for this session
+}
+
+toggle_auto_env_activation() {
+    if [[ $USER_DEACTIVATED -eq 0 ]]; then
+        USER_DEACTIVATED=1
+        echo automatic virtual environment activation disabled
+    else
+        USER_DEACTIVATED=0
+        echo automatic virtual environment activation enabled
+    fi
+    sed -i "s/^USER_DEACTIVATED=.*$/USER_DEACTIVATED=$USER_DEACTIVATED/" ~/.bashrc
+    export USER_DEACTIVATED
 }
 
 # Function to check if git info printing is enabled
@@ -310,7 +324,6 @@ update_PS1() {
 
     # Automatically activate or deactivate virtual environment
     if check_env_folder; then
-        # Check if $VIRTUAL_ENV is empty
         if [ -z "$VIRTUAL_ENV" ]; then
             if [ "$USER_DEACTIVATED" = 0 ]; then
                 # Activate the virtual environment
@@ -322,10 +335,11 @@ update_PS1() {
             sed -i "s/^USER_DEACTIVATED=.*$/USER_DEACTIVATED=0/" ~/.bashrc
         fi
     else
-        # Check if $VIRTUAL_ENV is not empty
         if [ -n "$VIRTUAL_ENV" ]; then
+            # for some reason, even if deactivate is alias'd, it'll use
+            # the virtual environment's deactivate
             deactivate
-            if [[ -v deactivate_copy && -n $deactivate_copy ]]; then
+            if [[ $(type -t deactivate) == "alias" ]]; then
                 unalias deactivate
             fi
         fi
