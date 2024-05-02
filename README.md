@@ -8,5 +8,5 @@ The provided .bashrc file adds the following modifications and functionality to 
 - If you're in a directory with git version control, some information about the git repository is appended to $PS1.
     - This is formatted as (${branch_name} ↑${num_commits} ${num_staged_files}:${num_modified_files})
         - The number of commits is only shown if num_commits > 0.
-        - The number of stage files an number of modified files is only shown if (num_staged files > 0 || num_modified_files > 0).
+        - The number of staged files and number of modified files is only shown if (num_staged_files > 0 || num_modified_files > 0).
     - You can choose whether or not to display git information by running **$ toggle_git_info**. I have it enabled.
