@@ -287,7 +287,7 @@ update_PS1() {
         output_PS1=$(echo "$output_PS1" | sed -E 's/^(.*?)\\\$ .*/\1/')
         # the suffix is directly set to this instead of using the original suffix, 
         # because using the original suffix causes issues with text in the terminal not line wrapping
-        local suffix="\$ "
+        local suffix="\\$ "
 
         local staged_count=$(staged_files_count)
         local modified_count=$(modified_files_count)
