@@ -188,7 +188,8 @@ find_env_folder() {
 USER_DEACTIVATED=0
 user_deactivate() {
     sed -i "s/^USER_DEACTIVATED=.*$/USER_DEACTIVATED=1/" ~/.bashrc
-    command deactivate
+    USER_DEACTIVATED=1
+    $deactivate_copy
 }
 
 # Function to check if git info printing is enabled
@@ -315,6 +316,7 @@ update_PS1() {
                 # Activate the virtual environment
                 env_path=$(find_env_folder)
                 source "${env_path}/bin/activate"
+                deactivate_copy=$(type deactivate | sed '1d')
                 alias deactivate='user_deactivate'
             fi
             sed -i "s/^USER_DEACTIVATED=.*$/USER_DEACTIVATED=0/" ~/.bashrc
@@ -322,7 +324,10 @@ update_PS1() {
     else
         # Check if $VIRTUAL_ENV is not empty
         if [ -n "$VIRTUAL_ENV" ]; then
-            command deactivate
+            deactivate
+            if [[ -v deactivate_copy && -n $deactivate_copy ]]; then
+                unalias deactivate
+            fi
         fi
     fi
 
