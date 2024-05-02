@@ -130,12 +130,12 @@ max_length=65
 # ex: $ set_max_length 59
 set_max_length() {
     if [[ "$1" =~ ^[0-9]+$ ]]; then
-        if (( $1 % 2 == 0 )); then
-            echo "Please provide an odd number for max_length."
-        else
+        if (( $1 >= 3 )) && (( $1 % 2 != 0 )); then
             sed -i "s/^max_length=.*$/max_length=$1/" ~/.bashrc
             export max_length=$1
             echo "max_length set to $1"
+        else
+            echo "Please provide a positive odd number greater than or equal to 3 for max_length."
         fi
     else
         echo "Invalid input. Please provide a positive integer."
