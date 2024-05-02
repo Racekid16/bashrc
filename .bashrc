@@ -187,6 +187,7 @@ auto_env_activation=1
 toggle_auto_env_activation() {
     if [[ $auto_env_activation -eq 0 ]]; then
         auto_env_activation=1
+        session_auto_env_activation=1
         echo automatic virtual environment activation enabled
     else
         auto_env_activation=0
