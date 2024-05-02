@@ -159,6 +159,38 @@ toggle_git_info() {
     export git_info_enabled
 }
 
+# Function to check if the env/ folder exists in the current or parent directories
+check_env_folder() {
+    local dir="$PWD"
+    while [ "$dir" != "/" ]; do
+        if [ -d "$dir/env" ]; then
+            return 0  # env/ folder found
+        fi
+        dir=$(dirname "$dir")  # Move to the parent directory
+    done
+    return 1  # env/ folder not found
+}
+
+# Function that gets the path to the env assuming there is one
+find_env_folder() {
+    local dir="$PWD"
+    while [ "$dir" != "/" ]; do
+        if [ -d "$dir/env" ]; then
+            echo "$dir/env"  # Echo the path to the env/ folder
+            return         # Stop the loop once the env folder is found
+        fi
+        dir=$(dirname "$dir")  # Move to the parent directory
+    done
+}
+
+# Check whether the virtual environment was automatically deactivated by the script
+# or manually by the user (if by the user, don't automatically activate again)
+USER_DEACTIVATED=0
+user_deactivate() {
+    sed -i "s/^USER_DEACTIVATED=.*$/USER_DEACTIVATED=1/" ~/.bashrc
+    command deactivate
+}
+
 # Function to check if git info printing is enabled
 is_git_info_enabled() {
     [[ $git_info_enabled -eq 1 ]]
@@ -248,6 +280,7 @@ staged_files_count() {
     git diff --staged --name-only | wc -l
 }
 
+# Function to count the number of modified but unstaged files
 modified_files_count() {
     git diff --name-only | wc -l
 }
@@ -272,6 +305,25 @@ update_PS1() {
         local truncated_cwd=$(truncate_cwd "$cwd")
         local cwd_color="${blue}${truncated_cwd}${reset}"
         output_PS1=$(truncate_ps1 "$output_PS1" "$cwd_color")
+    fi
+
+    # Automatically activate or deactivate virtual environment
+    if check_env_folder; then
+        # Check if $VIRTUAL_ENV is empty
+        if [ -z "$VIRTUAL_ENV" ]; then
+            if [ "$USER_DEACTIVATED" = 0 ]; then
+                # Activate the virtual environment
+                env_path=$(find_env_folder)
+                source "${env_path}/bin/activate"
+                alias deactivate='user_deactivate'
+            fi
+            sed -i "s/^USER_DEACTIVATED=.*$/USER_DEACTIVATED=0/" ~/.bashrc
+        fi
+    else
+        # Check if $VIRTUAL_ENV is not empty
+        if [ -n "$VIRTUAL_ENV" ]; then
+            command deactivate
+        fi
     fi
 
     # because I changed the PS1, virtual environment activate scripts would no longer add the (env)

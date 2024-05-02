@@ -3,6 +3,8 @@ I use WSL-Ubuntu-bash.
 The provided .bashrc file adds the following modifications and functionality to the terminal:
 - The terminal will print **SIGINT** and **SIGTSTP** when you press Ctrl + C and Ctrl + Z respectively. 
 - When you are in a virtual environment, a pink **(env)** is prepended to $PS1.
+- Virtual environments will automatically be activated if there is a virtual environment in the current or parent directory in a folder named "env", and deactivated if there's not.
+    - If the user manually deactivates a virtual environment, the automatic activation is disabled for the current session
 - The current working directory (cwd) part of $PS1 can be truncated to be shorter if its length exceeds some specified amount of characters.
     - The maximum allowed length of the cwd can be modified via the provided set_max_length function, for example: **$ set_max_length 59** (note: the function enforces that an odd integer number argument is provided). I have it set to 65.
 - If you're in a directory with git version control, some information about the git repository is appended to $PS1.
