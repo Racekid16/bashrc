@@ -183,27 +183,27 @@ find_env_folder() {
     done
 }
 
+auto_env_activation=1
+toggle_auto_env_activation() {
+    if [[ $auto_env_activation -eq 0 ]]; then
+        auto_env_activation=1
+        echo automatic virtual environment activation enabled
+    else
+        auto_env_activation=0
+        echo automatic virtual environment activation disabled
+    fi
+    sed -i "s/^auto_env_activation=.*$/auto_env_activation=$auto_env_activation/" ~/.bashrc
+    export auto_env_activation
+}
+
 # Check whether the virtual environment was automatically deactivated by the script
 # or manually by the user (if by the user, don't automatically activate again)
-USER_DEACTIVATED=0
+session_auto_env_activation=1
 user_deactivate() {
-    sed -i "s/^USER_DEACTIVATED=.*$/USER_DEACTIVATED=1/" ~/.bashrc
-    USER_DEACTIVATED=1
+    session_auto_env_activation=0
     $deactivate_copy
     unalias deactivate
     echo automatic virtual environment activation disabled for this session
-}
-
-toggle_auto_env_activation() {
-    if [[ $USER_DEACTIVATED -eq 0 ]]; then
-        USER_DEACTIVATED=1
-        echo automatic virtual environment activation disabled
-    else
-        USER_DEACTIVATED=0
-        echo automatic virtual environment activation enabled
-    fi
-    sed -i "s/^USER_DEACTIVATED=.*$/USER_DEACTIVATED=$USER_DEACTIVATED/" ~/.bashrc
-    export USER_DEACTIVATED
 }
 
 # Function to check if git info printing is enabled
@@ -324,15 +324,14 @@ update_PS1() {
 
     # Automatically activate or deactivate virtual environment
     if check_env_folder; then
-        if [ -z "$VIRTUAL_ENV" ]; then
-            if [ "$USER_DEACTIVATED" = 0 ]; then
+        if [ -z "$VIRTUAL_ENV" ] && [ "$auto_env_activation" = 1 ]; then
+            if [ "$session_auto_env_activation" = 1 ]; then
                 # Activate the virtual environment
                 env_path=$(find_env_folder)
                 source "${env_path}/bin/activate"
                 deactivate_copy=$(type deactivate | sed '1d')
                 alias deactivate='user_deactivate'
             fi
-            sed -i "s/^USER_DEACTIVATED=.*$/USER_DEACTIVATED=0/" ~/.bashrc
         fi
     else
         if [ -n "$VIRTUAL_ENV" ]; then
