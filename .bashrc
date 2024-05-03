@@ -122,12 +122,24 @@ fi
 # usage: $ cdw
 alias cdw='cd /mnt/c/Users/17508/Documents/VSCode_Projects'
 
-# maximum length of the current working directory (cwd) part of PS1, should be an odd number
-# I like setting it to 65
+# variables that the user can manipulate only via the provided interface
 max_length=65
+git_info_enabled=1
+auto_env_activation=1
+session_auto_env_activation=1
 
-# a function that lets you set the max_length variable directly from the terminal
-# ex: $ set_max_length 59
+# Define colors
+readonly pink='\[\033[95m\]'
+readonly blue='\[\033[01;34m\]'
+readonly yellow='\[\033[1;33m\]'
+readonly green='\[\033[0;32m\]'
+readonly red='\[\033[0;31m\]'
+readonly reset='\[\033[0m\]'
+
+# Store the original PS1- this is templated, not a static literal
+readonly original_PS1="${PS1}"
+
+# These are functions that are meant to be called from the terminal
 set_max_length() {
     if [[ "$1" =~ ^[0-9]+$ ]]; then
         if (( $1 >= 3 )) && (( $1 % 2 != 0 )); then
@@ -142,9 +154,6 @@ set_max_length() {
     fi
 }
 
-# Initialize indicator variable (0 for disabled, 1 for enabled)
-git_info_enabled=1
-
 # Function to toggle git info printing
 # usage: $ toggle_git_info
 toggle_git_info() {
@@ -158,6 +167,23 @@ toggle_git_info() {
     sed -i "s/^git_info_enabled=.*$/git_info_enabled=$git_info_enabled/" ~/.bashrc
     export git_info_enabled
 }
+
+toggle_auto_env_activation() {
+    if [[ $auto_env_activation -eq 0 ]]; then
+        auto_env_activation=1
+        session_auto_env_activation=1
+        echo automatic virtual environment activation enabled
+    else
+        auto_env_activation=0
+        echo automatic virtual environment activation disabled
+    fi
+    sed -i "s/^auto_env_activation=.*$/auto_env_activation=$auto_env_activation/" ~/.bashrc
+    export auto_env_activation
+}
+
+# these are functions that are not meant to be called from the terminal
+# a function that lets you set the max_length variable directly from the terminal
+# ex: $ set_max_length 59
 
 # Function to check if the env/ folder exists in the current or parent directories
 check_env_folder() {
@@ -183,23 +209,8 @@ find_env_folder() {
     done
 }
 
-auto_env_activation=1
-toggle_auto_env_activation() {
-    if [[ $auto_env_activation -eq 0 ]]; then
-        auto_env_activation=1
-        session_auto_env_activation=1
-        echo automatic virtual environment activation enabled
-    else
-        auto_env_activation=0
-        echo automatic virtual environment activation disabled
-    fi
-    sed -i "s/^auto_env_activation=.*$/auto_env_activation=$auto_env_activation/" ~/.bashrc
-    export auto_env_activation
-}
-
-# Check whether the virtual environment was automatically deactivated by the script
-# or manually by the user (if by the user, don't automatically activate again)
-session_auto_env_activation=1
+# Function for when a user manually deactivates the a virtual environment
+# (not run when this script runs deactivate)
 user_deactivate() {
     session_auto_env_activation=0
     $deactivate_copy
@@ -237,10 +248,6 @@ sigtstp_handler() {
     echo -en "\033[${spaces}C"
     printf "%s\n" "$msg"
 }
-
-# Set up signal handlers
-trap 'sigint_handler' SIGINT
-trap 'sigtstp_handler' SIGTSTP
 
 # Function to truncate the cwd part of PS1 if it's longer than max_length characters
 truncate_cwd() {
@@ -301,17 +308,6 @@ modified_files_count() {
     git diff --name-only | wc -l
 }
 
-# Define colors
-pink='\[\033[95m\]'
-blue='\[\033[01;34m\]'
-yellow='\[\033[1;33m\]'
-green='\[\033[0;32m\]'
-red='\[\033[0;31m\]'
-reset='\[\033[0m\]'
-
-# Store the original PS1- this is templated, not a static literal
-original_PS1="${PS1}"
-
 # Output the truncated PS1 with git information
 update_PS1() {
     local output_PS1="${original_PS1}"
@@ -325,14 +321,12 @@ update_PS1() {
 
     # Automatically activate or deactivate virtual environment
     if check_env_folder; then
-        if [ -z "$VIRTUAL_ENV" ] && [ "$auto_env_activation" = 1 ]; then
-            if [ "$session_auto_env_activation" = 1 ]; then
-                # Activate the virtual environment
-                env_path=$(find_env_folder)
-                source "${env_path}/bin/activate"
-                deactivate_copy=$(type deactivate | sed '1d')
-                alias deactivate='user_deactivate'
-            fi
+        if [ -z "$VIRTUAL_ENV" ] && [ "$auto_env_activation" = 1 ] && [ "$session_auto_env_activation" = 1 ]; then
+            # Activate the virtual environment
+            env_path=$(find_env_folder)
+            source "${env_path}/bin/activate"
+            deactivate_copy=$(type deactivate | sed '1d')
+            alias deactivate='user_deactivate'
         fi
     else
         if [ -n "$VIRTUAL_ENV" ]; then
@@ -382,6 +376,10 @@ update_PS1() {
 
     PS1="${output_PS1}"
 }
+
+# Set up signal handlers
+trap 'sigint_handler' SIGINT
+trap 'sigtstp_handler' SIGTSTP
 
 # Execute update_PS1 function before displaying each prompt
 PROMPT_COMMAND=update_PS1
