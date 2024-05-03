@@ -3,7 +3,7 @@ I use WSL-Ubuntu-bash.
 The provided .bashrc file adds the following modifications and functionality to the terminal:
 - The terminal will print **SIGINT** and **SIGTSTP** when you press Ctrl + C and Ctrl + Z respectively. 
 - When you are in a virtual environment, a pink **(env)** is prepended to $PS1.
-- Virtual environments will automatically be activated if there is a virtual environment in the current or parent directory in a folder named "env", and deactivated if there's not.
+- Virtual environments will automatically be activated if there is a virtual environment in the current or parent directory, and deactivated if there's not. Virtual environment folders must be named env, venv, venv3, or .venv for this feature to work.
     - If the user manually deactivates a virtual environment, the automatic activation is disabled for the current session.
     - You can choose whether or not to automatically activate virtual environments by running **$ toggle_auto_env_activation**. I have it enabled.
 - The current working directory (cwd) part of $PS1 can be truncated to be shorter if its length exceeds some specified amount of characters.

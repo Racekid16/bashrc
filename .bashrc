@@ -188,23 +188,29 @@ toggle_auto_env_activation() {
 # Function to check if the env/ folder exists in the current or parent directories
 check_env_folder() {
     local dir="$PWD"
+    local env_folders=("env" "venv" "venv3" ".venv")
     while [ "$dir" != "/" ]; do
-        if [ -d "$dir/env" ]; then
-            return 0  # env/ folder found
-        fi
+        for folder in "${env_folders[@]}"; do
+            if [ -d "$dir/$folder" ]; then
+                return 0  # Virtual environment folder found
+            fi
+        done
         dir=$(dirname "$dir")  # Move to the parent directory
     done
-    return 1  # env/ folder not found
+    return 1  # Virtual environment folder not found
 }
 
 # Function that gets the path to the env assuming there is one
 find_env_folder() {
     local dir="$PWD"
+    local env_folders=("env" "venv" "venv3" ".venv")
     while [ "$dir" != "/" ]; do
-        if [ -d "$dir/env" ]; then
-            echo "$dir/env"  # Echo the path to the env/ folder
-            return         # Stop the loop once the env folder is found
-        fi
+        for folder in "${env_folders[@]}"; do
+            if [ -d "$dir/$folder" ]; then
+                echo "$dir/$folder"  # Echo the path to the virtual environment folder
+                return               # Stop the loop once the folder is found
+            fi
+        done
         dir=$(dirname "$dir")  # Move to the parent directory
     done
 }
