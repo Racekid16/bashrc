@@ -383,7 +383,7 @@ update_PS1() {
 
     # Indicate whether you're in a ssh session
     if [ -n "$SSH_CONNECTION" ]; then
-        ssh_prompt="(${orange}ssh${reset}) "
+        ssh_prompt="(${orange}SSH${reset}) "
         output_PS1="${ssh_prompt}${output_PS1}"
     fi
 
