@@ -122,24 +122,27 @@ fi
 # usage: $ cdw
 alias cdw='cd /mnt/c/Users/17508/Documents/VSCode_Projects'
 
-# variables that the user can manipulate only via the provided interface
+# variables that the user can manipulate via the provided interface
 max_length=65
 git_info_enabled=1
 auto_env_activation=1
 session_auto_env_activation=1
 
 # Define colors
-readonly pink='\[\033[95m\]'
-readonly blue='\[\033[01;34m\]'
-readonly yellow='\[\033[1;33m\]'
-readonly green='\[\033[0;32m\]'
-readonly red='\[\033[0;31m\]'
-readonly reset='\[\033[0m\]'
+pink='\[\033[95m\]'
+blue='\[\033[01;34m\]'
+yellow='\[\033[1;33m\]'
+green='\[\033[0;32m\]'
+red='\[\033[0;31m\]'
+reset='\[\033[0m\]'
 
 # Store the original PS1- this is templated, not a static literal
-readonly original_PS1="${PS1}"
+original_PS1="${PS1}"
 
 # These are functions that are meant to be called from the terminal
+
+# Function to set the max_length variable directly from the terminal
+# ex: $ set_max_length 59
 set_max_length() {
     if [[ "$1" =~ ^[0-9]+$ ]]; then
         if (( $1 >= 3 )) && (( $1 % 2 != 0 )); then
@@ -168,6 +171,9 @@ toggle_git_info() {
     export git_info_enabled
 }
 
+
+# Function to toggle automatically activating virtual environments
+# usage: $ toggle_auto_env_activation
 toggle_auto_env_activation() {
     if [[ $auto_env_activation -eq 0 ]]; then
         auto_env_activation=1
@@ -182,8 +188,6 @@ toggle_auto_env_activation() {
 }
 
 # these are functions that are not meant to be called from the terminal
-# a function that lets you set the max_length variable directly from the terminal
-# ex: $ set_max_length 59
 
 # Function to check if the env/ folder exists in the current or parent directories
 check_env_folder() {
@@ -222,6 +226,7 @@ user_deactivate() {
     $deactivate_copy
     unalias deactivate
     echo automatic virtual environment activation disabled for this session
+    ech to disable the setting, run \$ toggle_auto_env_activation
 }
 
 # Function to check if git info printing is enabled
@@ -253,6 +258,22 @@ sigtstp_handler() {
     # Move cursor to the rightmost side of the terminal
     echo -en "\033[${spaces}C"
     printf "%s\n" "$msg"
+}
+
+# Function to handle ERR signal (commands with exit status 1)
+err_handler() {
+    local cols=$(tput cols)  # Get the number of columns in the terminal
+    local msg_1="✗"
+    local msg_2=" 1"
+
+    # Calculate the number of spaces needed to move to the rightmost side of the terminal
+    local spaces=$((cols - ${#msg_1} -${#msg_2} - 1))
+
+    # Move the cursor up one line
+    printf "\033[1A"
+    # Move cursor to the rightmost side of the terminal
+    echo -en "\033[${spaces}C"
+    echo -e "\033[31m${msg_1}\033[0m${msg_2}"
 }
 
 # Function to truncate the cwd part of PS1 if it's longer than max_length characters
@@ -386,6 +407,7 @@ update_PS1() {
 # Set up signal handlers
 trap 'sigint_handler' SIGINT
 trap 'sigtstp_handler' SIGTSTP
+trap 'err_handler' ERR
 
 # Execute update_PS1 function before displaying each prompt
 PROMPT_COMMAND=update_PS1
