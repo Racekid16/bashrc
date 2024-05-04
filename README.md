@@ -15,3 +15,5 @@ The provided .bashrc file adds the following modifications and functionality to 
         - The number of commits is only shown if num_commits > 0.
         - The number of staged files and number of modified files is only shown if (num_staged_files > 0 || num_modified_files > 0).
     - You can choose whether or not to display git information by running **$ toggle_git_info**. I have it enabled.
+
+![Example of terminal modifications](terminal_example.png)
