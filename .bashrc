@@ -178,10 +178,10 @@ toggle_auto_env_activation() {
     if [[ $auto_env_activation -eq 0 ]]; then
         auto_env_activation=1
         session_auto_env_activation=1
-        echo automatic virtual environment activation enabled
+        echo "auto_env_activation enabled"
     else
         auto_env_activation=0
-        echo automatic virtual environment activation disabled
+        echo "auto_env_activation disabled"
     fi
     sed -i "s/^auto_env_activation=.*$/auto_env_activation=$auto_env_activation/" ~/.bashrc
     export auto_env_activation
@@ -225,8 +225,8 @@ user_deactivate() {
     session_auto_env_activation=0
     $deactivate_copy
     unalias deactivate
-    echo automatic virtual environment activation disabled for this session
-    echo to disable the setting, run \$ toggle_auto_env_activation
+    echo "session_auto_env_activation disabled"
+    echo "to disable auto_env_activation beyond this session, run \$ toggle_auto_env_activation"
 }
 
 # Function to check if git info printing is enabled
