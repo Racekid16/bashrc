@@ -130,7 +130,6 @@ session_auto_env_activation=1
 
 # Define colors
 pink='\[\033[95m\]'
-blue='\[\033[01;34m\]'
 yellow='\[\033[1;33m\]'
 green='\[\033[0;32m\]'
 red='\[\033[0;31m\]'
@@ -226,7 +225,7 @@ user_deactivate() {
     $deactivate_copy
     unalias deactivate
     echo automatic virtual environment activation disabled for this session
-    ech to disable the setting, run \$ toggle_auto_env_activation
+    echo to disable the setting, run \$ toggle_auto_env_activation
 }
 
 # Function to check if git info printing is enabled
@@ -342,8 +341,10 @@ update_PS1() {
     local cwd=$(get_cleaned_cwd)
     if [ ${#cwd} -gt "$max_length" ]; then
         local truncated_cwd=$(truncate_cwd "$cwd")
-        local cwd_color="${blue}${truncated_cwd}${reset}"
-        output_PS1=$(truncate_ps1 "$output_PS1" "$cwd_color")
+        # finds the original color of the cwd
+        local cwd_color=$(echo "$original_PS1" | grep -oP '\\[\\033\[[0-9;]*m\\](?=\\w)')
+        local cwd="${cwd_color}${truncated_cwd}${reset}"
+        output_PS1=$(truncate_ps1 "$output_PS1" "$cwd")
     fi
 
     # Automatically activate or deactivate virtual environment
