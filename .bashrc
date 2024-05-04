@@ -130,6 +130,7 @@ session_auto_env_activation=1
 
 # Define colors
 pink='\[\033[95m\]'
+orange='\[\033[38;5;208m\]'
 yellow='\[\033[1;33m\]'
 green='\[\033[0;32m\]'
 red='\[\033[0;31m\]'
@@ -290,7 +291,7 @@ truncate_cwd() {
     echo "$result"
 }
 
-# return the truncated cwd with the appropriate prefix and suffix
+# Return the PS1 with the truncated cwd
 truncate_ps1() {
     local ps1="$1"
     local cwd="$2"
@@ -307,6 +308,11 @@ get_cleaned_cwd() {
     local home_dir=$(eval echo "~")
     cwd=${cwd//$home_dir/'~'}
     echo "$cwd"
+}
+
+# Get the original color of the cwd 
+get_cwd_color() {
+    echo "$original_PS1" | grep -oP '\\[\\033\[[0-9;]*m\\](?=\\w)'
 }
 
 # Determine whether this directory is a git repository
@@ -342,7 +348,7 @@ update_PS1() {
     if [ ${#cwd} -gt "$max_length" ]; then
         local truncated_cwd=$(truncate_cwd "$cwd")
         # finds the original color of the cwd
-        local cwd_color=$(echo "$original_PS1" | grep -oP '\\[\\033\[[0-9;]*m\\](?=\\w)')
+        local cwd_color=$(get_cwd_color)
         local cwd="${cwd_color}${truncated_cwd}${reset}"
         output_PS1=$(truncate_ps1 "$output_PS1" "$cwd")
     fi
@@ -373,6 +379,12 @@ update_PS1() {
         venv_name=$(basename "$VIRTUAL_ENV")
         venv_prompt="(${pink}${venv_name}${reset}) "
         output_PS1="${venv_prompt}${output_PS1}"
+    fi
+
+    # Indicate whether you're in a ssh session
+    if [ -n "$SSH_CONNECTION" ]; then
+        ssh_prompt="(${orange}ssh${reset}) "
+        output_PS1="${ssh_prompt}${output_PS1}"
     fi
 
     if is_git_repository && is_git_info_enabled; then
