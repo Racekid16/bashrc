@@ -211,11 +211,12 @@ sigtstp_handler() {
     printf "%s\n" "$msg"
 }
 
-# Function to handle ERR signal (commands with exit status 1)
+# Function to handle ERR signal (commands with an error exit status)
 err_handler() {
+    local exit_status=$?
     local cols=$(tput cols)  # Get the number of columns in the terminal
     local msg_1="✗"
-    local msg_2=" 1"
+    local msg_2=" ${exit_status}"
 
     # Calculate the number of spaces needed to move to the rightmost side of the terminal
     local spaces=$((cols - ${#msg_1} -${#msg_2}))
@@ -423,9 +424,9 @@ update_PS1() {
 
     # Accounting for the $ and the space after it
     PS1_length=$((PS1_length + 2))
+
     local terminal_width=$(tput cols)  # Get the number of columns in the terminal
     local num_spaces=$((terminal_width - PS1_length))
-
     if [ "$num_spaces" -lt "$min_spaces" ]; then
         local space_difference=$((min_spaces - num_spaces))
         local cwd_new_length=$((cwd_length - space_difference ))

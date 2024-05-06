@@ -2,7 +2,7 @@
 I use WSL-Ubuntu-bash.
 The provided .bashrc file adds the following modifications and functionality to the terminal:
 - The terminal will print **SIGINT** and **SIGTSTP** when you press Ctrl + C and Ctrl + Z respectively.
-- If a command fails/errors/has an exit status of 1, the terminal will print **✗ 1**.
+- If a command fails/errors, the terminal will print **✗ ${error exit status}**.
 - When you are in a ssh session, an orange **(SSH)** is prepended to $PS1.  
 - When you are in a virtual environment, a pink **(env)** is prepended to $PS1.
 - Virtual environments will automatically be activated if there is a virtual environment in the current or parent directory, and deactivated if there's not. Virtual environment folders must be named env, venv, venv3, or .venv for this feature to work.
