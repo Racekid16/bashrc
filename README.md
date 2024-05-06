@@ -8,8 +8,8 @@ The provided .bashrc file adds the following modifications and functionality to 
 - Virtual environments will automatically be activated if there is a virtual environment in the current or parent directory, and deactivated if there's not. Virtual environment folders must be named env, venv, venv3, or .venv for this feature to work.
     - If the user manually deactivates a virtual environment, the automatic activation is disabled for the current session.
     - You can choose whether or not to automatically activate virtual environments by running **$ toggle_auto_env_activation**. I have it enabled.
-- The current working directory (cwd) part of $PS1 can be truncated to be shorter if its length exceeds some specified amount of characters.
-    - The maximum allowed length of the cwd can be modified via the provided set_max_length function, for example: **$ set_max_length 59** (note: the function enforces that an odd integer number argument is provided). I have it set to 65.
+- You can specify a minimum number of spaces that you want available at the end of each line in your terminal (stored in the min_spaces variable). If PS1 is so long that it'd cause the number of spaces at the end of the terminal to be less than the specified amount, the current working directory part of PS1 is truncated until the specified number of spaces are availab.e
+    - The minimum number of spaces at the end of the terminal can be modified via the provided set_min_spaces function, for example: **$ set_min_spaces 30** (note: if you want to essentially disable this feature, you can provide an argument such as -1000). I have it set to 20.
 - If you're in a directory with git version control, some information about the git repository is appended to $PS1.
     - This is formatted as (${branch_name} ↑${num_commits} ${num_staged_files}:${num_modified_files})
         - The number of commits is only shown if num_commits > 0.

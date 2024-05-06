@@ -123,7 +123,7 @@ fi
 alias cdw='cd /mnt/c/Users/17508/Documents/VSCode_Projects'
 
 # variables that the user can manipulate via the provided interface
-max_length=65
+min_spaces=20
 git_info_enabled=1
 auto_env_activation=1
 session_auto_env_activation=1
@@ -141,19 +141,15 @@ original_PS1="${PS1}"
 
 # These are functions that are meant to be called from the terminal
 
-# Function to set the max_length variable directly from the terminal
-# ex: $ set_max_length 59
-set_max_length() {
-    if [[ "$1" =~ ^[0-9]+$ ]]; then
-        if (( $1 >= 3 )) && (( $1 % 2 != 0 )); then
-            sed -i "s/^max_length=.*$/max_length=$1/" ~/.bashrc
-            export max_length=$1
-            echo "max_length set to $1"
-        else
-            echo "Please provide a positive odd number greater than or equal to 3 for max_length."
-        fi
+# Function to set the min_spaces variable directly from the terminal
+# ex: $ set_min_spaces 20
+set_min_spaces() {
+    if [[ "$1" =~ ^-?[0-9]+$ ]]; then
+        sed -i "s/^min_spaces=.*$/min_spaces=$1/" ~/.bashrc
+        export min_spaces=$1
+        echo "min_spaces set to $1"
     else
-        echo "Invalid input. Please provide a positive integer."
+        echo "Invalid input. Please provide an integer."
     fi
 }
 
@@ -188,6 +184,48 @@ toggle_auto_env_activation() {
 }
 
 # these are functions that are not meant to be called from the terminal
+
+# Function to handle SIGINT signal (Ctrl+C)
+sigint_handler() {
+    local cols=$(tput cols)  # Get the number of columns in the terminal
+    local msg="SIGINT"
+
+    # Calculate the number of spaces needed to move to the rightmost side of the terminal
+    local spaces=$((cols - ${#msg}))
+
+    # Move cursor to the rightmost side of the terminal
+    echo -en "\033[${spaces}C"
+    echo -n "$msg"
+}
+
+# Function to handle SIGTSTP signal (Ctrl+Z)
+sigtstp_handler() {
+    local cols=$(tput cols) # Get the number of columns in the terminal
+    local msg="SIGTSTP"
+
+    # Calculate the number of spaces needed to move to the rightmost side of the terminal
+    local spaces=$((cols - ${#msg}))
+
+    # Move cursor to the rightmost side of the terminal
+    echo -en "\033[${spaces}C"
+    printf "%s\n" "$msg"
+}
+
+# Function to handle ERR signal (commands with exit status 1)
+err_handler() {
+    local cols=$(tput cols)  # Get the number of columns in the terminal
+    local msg_1="✗"
+    local msg_2=" 1"
+
+    # Calculate the number of spaces needed to move to the rightmost side of the terminal
+    local spaces=$((cols - ${#msg_1} -${#msg_2}))
+
+    # Move the cursor up one line
+    printf "\033[1A"
+    # Move cursor to the rightmost side of the terminal
+    echo -en "\033[${spaces}C"
+    echo -e "\033[31m${msg_1}\033[0m${msg_2}"
+}
 
 # Function to check if the env/ folder exists in the current or parent directories
 check_env_folder() {
@@ -229,77 +267,34 @@ user_deactivate() {
     echo "to disable auto_env_activation beyond this session, run \$ toggle_auto_env_activation"
 }
 
-# Function to check if git info printing is enabled
-is_git_info_enabled() {
-    [[ $git_info_enabled -eq 1 ]]
-}
-
-# Function to handle SIGINT signal (Ctrl+C)
-sigint_handler() {
-    local cols=$(tput cols)  # Get the number of columns in the terminal
-    local msg="SIGINT"
-
-    # Calculate the number of spaces needed to move to the rightmost side of the terminal
-    local spaces=$((cols - ${#msg} - 1))
-
-    # Move cursor to the rightmost side of the terminal
-    echo -en "\033[${spaces}C"
-    echo -n "$msg"
-}
-
-# Function to handle SIGTSTP signal (Ctrl+Z)
-sigtstp_handler() {
-    local cols=$(tput cols)  # Get the number of columns in the terminal
-    local msg="SIGTSTP"
-
-    # Calculate the number of spaces needed to move to the rightmost side of the terminal
-    local spaces=$((cols - ${#msg} - 1))
-
-    # Move cursor to the rightmost side of the terminal
-    echo -en "\033[${spaces}C"
-    printf "%s\n" "$msg"
-}
-
-# Function to handle ERR signal (commands with exit status 1)
-err_handler() {
-    local cols=$(tput cols)  # Get the number of columns in the terminal
-    local msg_1="✗"
-    local msg_2=" 1"
-
-    # Calculate the number of spaces needed to move to the rightmost side of the terminal
-    local spaces=$((cols - ${#msg_1} -${#msg_2} - 1))
-
-    # Move the cursor up one line
-    printf "\033[1A"
-    # Move cursor to the rightmost side of the terminal
-    echo -en "\033[${spaces}C"
-    echo -e "\033[31m${msg_1}\033[0m${msg_2}"
-}
-
-# Function to truncate the cwd part of PS1 if it's longer than max_length characters
+# Function to truncate the cwd part of PS1 if it's longer than min_spaces characters
 truncate_cwd() {
     local cwd="$1"
+    local cwd_new_length="$2"
     local cwd_length=${#cwd}
-    local middle_index=$(( (cwd_length - 1) / 2 ))
-    local num_cut=$(( cwd_length - max_length + 3 ))
-    local prefix_upper=$(( middle_index - ((num_cut + 1) / 2) + 1 ))
-    local suffix_lower=$(( middle_index + (num_cut / 2) + 1 ))
+
+    local y=$((cwd_new_length - 3))
+    local x=$(( y / 2 ))
+
+    local prefix_upper=$x
+    local suffix_lower
+    if [ $((cwd_new_length % 2)) -eq 0 ]; then
+        suffix_lower=$(( cwd_length - x - 1 ))
+    else
+        suffix_lower=$(( cwd_length - x ))
+    fi
+
     local prefix="${cwd:0:prefix_upper}"
     local suffix="${cwd:suffix_lower}"
-
     local result="${prefix}...${suffix}"
     echo "$result"
 }
 
 # Return the PS1 with the truncated cwd
-truncate_ps1() {
-    local ps1="$1"
-    local cwd="$2"
-    # trailing spaces are removed from the prefix, since it results in an extra space between 
-    # the prefix and cwd
-    local prefix=$(echo "$ps1" | sed -E 's/(.*:)(.*\w)(.*\$)/\1/' | sed -e 's/[[:space:]]*$//')
-    local suffix="\\$ "
-    echo "${prefix}${cwd}${suffix}"
+insert_truncated_cwd() {
+    local output_PS1="$1"
+    local truncated_cwd="$2"
+    echo "${output_PS1//\\w/$truncated_cwd}"
 }
 
 # Get the current working directory, but with the home diretory replaced with ~
@@ -310,9 +305,9 @@ get_cleaned_cwd() {
     echo "$cwd"
 }
 
-# Get the original color of the cwd 
-get_cwd_color() {
-    echo "$original_PS1" | grep -oP '\\[\\033\[[0-9;]*m\\](?=\\w)'
+# Function to check if git info printing is enabled
+is_git_info_enabled() {
+    [[ $git_info_enabled -eq 1 ]]
 }
 
 # Determine whether this directory is a git repository
@@ -343,15 +338,7 @@ modified_files_count() {
 # Output the truncated PS1 with git information
 update_PS1() {
     local output_PS1="${original_PS1}"
-
-    local cwd=$(get_cleaned_cwd)
-    if [ ${#cwd} -gt "$max_length" ]; then
-        local truncated_cwd=$(truncate_cwd "$cwd")
-        # finds the original color of the cwd
-        local cwd_color=$(get_cwd_color)
-        local cwd="${cwd_color}${truncated_cwd}${reset}"
-        output_PS1=$(truncate_ps1 "$output_PS1" "$cwd")
-    fi
+    local PS1_length=0
 
     # Automatically activate or deactivate virtual environment
     if check_env_folder; then
@@ -379,39 +366,71 @@ update_PS1() {
         venv_name=$(basename "$VIRTUAL_ENV")
         venv_prompt="(${pink}${venv_name}${reset}) "
         output_PS1="${venv_prompt}${output_PS1}"
+        PS1_length=$((PS1_length + 3 + ${#venv_name}))
     fi
 
     # Indicate whether you're in a ssh session
     if [ -n "$SSH_CONNECTION" ]; then
         ssh_prompt="(${orange}SSH${reset}) "
         output_PS1="${ssh_prompt}${output_PS1}"
+        PS1_length=$((PS1_length + 6))
     fi
+
+    user_length=$(printf "%s" "$USER" | wc -c)
+    host_length=$(hostname | tr -d '\n' | wc -c)
+    # Accounts for the @ and : too
+    PS1_length=$((PS1_length + user_length + host_length + 2))
+
+    local cwd=$(get_cleaned_cwd)
+    local cwd_length=${#cwd}
+    PS1_length=$((PS1_length + cwd_length))
 
     if is_git_repository && is_git_info_enabled; then
         # gets the substring that appears before the last \$ in PS1
-        output_PS1=$(echo "$output_PS1" | sed -E 's/^(.*?)\\\$ .*/\1/')
-        # the suffix is directly set to this instead of using the original suffix, 
-        # because using the original suffix causes issues with text in the terminal not line wrapping
-        local suffix="\\$ "
+        output_PS1=$(echo "$output_PS1" | sed -E 's/^(.*?)\\\$ .*/\1/') 
 
+        local branch=$(parse_git_branch)
+        local num_commits=$(commit_count)
         local staged_count=$(staged_files_count)
         local modified_count=$(modified_files_count)
-        local branch=$(parse_git_branch)
-        local commits=$(commit_count)
+
+        # Accounts for the extra space and opening and closing parenthesis
+        PS1_length=$((PS1_length + 3))
+
+        local branch_info="${yellow}${branch}${reset}"
+        PS1_length=$((PS1_length + ${#branch}))
+
+        local commit_info=""
+        if [ "$num_commits" -gt 0 ]; then
+            commit_info=" ↑${yellow}${num_commits}${reset}"
+            # Accounts for ↑ and the space that directly precedes it too
+            PS1_length=$((PS1_length + ${#num_commits} + 2))
+        fi
 
         local git_info=""
         if [ "$staged_count" -gt 0 ] || [ "$modified_count" -gt 0 ]; then
             git_info=" ${green}${staged_count}${reset}:${red}${modified_count}${reset}"
+            # Accounts for the : and the space that directly precedes the staged count too
+            PS1_length=$((PS1_length + ${#staged_count} + ${#modified_count} + 2))
         fi
 
-        local commit_info=""
-        if [ "$commits" -gt 0 ]; then
-            commit_info=" ↑${yellow}${commits}${reset}"
-        fi
-
-        local branch_info="${yellow}${branch}${reset}"
+        # the suffix is directly set to this instead of using the original suffix, 
+        # because using the original suffix causes issues with text in the terminal not line wrapping
+        local suffix="\\$ "
 
         output_PS1="${output_PS1} (${branch_info}${commit_info}${git_info})${suffix}"
+    fi
+
+    # Accounting for the $ and the space after it
+    PS1_length=$((PS1_length + 2))
+    local terminal_width=$(tput cols)  # Get the number of columns in the terminal
+    local num_spaces=$((terminal_width - PS1_length))
+
+    if [ "$num_spaces" -lt "$min_spaces" ]; then
+        local space_difference=$((min_spaces - num_spaces))
+        local cwd_new_length=$((cwd_length - space_difference ))
+        local truncated_cwd=$(truncate_cwd "$cwd" "$cwd_new_length")
+        output_PS1=$(insert_truncated_cwd "$output_PS1" "$truncated_cwd")
     fi
 
     PS1="${output_PS1}"
