@@ -348,6 +348,11 @@ detect_remote_branch_changes() {
         return
     fi
 
+    # Check if the current branch has an upstream branch set
+    if ! git rev-parse --abbrev-ref --symbolic-full-name @{upstream} >/dev/null 2>&1; then
+        return
+    fi
+
     local current_branch=$(get_current_git_branch)
     local remote_branch=$(git for-each-ref --format='%(upstream:short)' refs/heads/"$current_branch")
 
