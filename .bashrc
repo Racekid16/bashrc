@@ -127,6 +127,7 @@ min_spaces=20
 git_info_enabled=1
 auto_env_activation=1
 session_auto_env_activation=1
+auto_git_fetch=1
 
 # Define colors
 pink='\[\033[95m\]'
@@ -147,6 +148,7 @@ previous_commit_hash=""
 
 # Function to set the min_spaces variable directly from the terminal
 # ex: $ set_min_spaces 20
+# Set this to a very negative value if you don't want cwd truncation
 set_min_spaces() {
     if [[ "$1" =~ ^-?[0-9]+$ ]]; then
         sed -i "s/^min_spaces=.*$/min_spaces=$1/" ~/.bashrc
@@ -160,21 +162,21 @@ set_min_spaces() {
 # Function to toggle git info printing
 # usage: $ toggle_git_info
 toggle_git_info() {
-    if [[ $git_info_enabled -eq 0 ]]; then
+    if [ $git_info_enabled -eq 0 ]; then
         git_info_enabled=1
         echo "git_info enabled"
     else
         git_info_enabled=0
         echo "git_info disabled"
     fi
-    sed -i "s/^git_info_enabled=.*$/git_info_enabled=$git_info_enabled/" ~/.bashrc
+    sed -i "s/^git_info_enabled=.*$/git_info_enabled=${git_info_enabled}/" ~/.bashrc
     export git_info_enabled
 }
 
 # Function to toggle automatically activating virtual environments
 # usage: $ toggle_auto_env_activation
 toggle_auto_env_activation() {
-    if [[ $auto_env_activation -eq 0 ]]; then
+    if [ $auto_env_activation -eq 0 ]; then
         auto_env_activation=1
         session_auto_env_activation=1
         echo "auto_env_activation enabled"
@@ -182,8 +184,22 @@ toggle_auto_env_activation() {
         auto_env_activation=0
         echo "auto_env_activation disabled"
     fi
-    sed -i "s/^auto_env_activation=.*$/auto_env_activation=$auto_env_activation/" ~/.bashrc
+    sed -i "s/^auto_env_activation=.*$/auto_env_activation=${auto_env_activation}/" ~/.bashrc
     export auto_env_activation
+}
+
+# Function to toggle automatically running $ git fetch whenever entering a new branch
+# usage: $ toggle_auto_git_fetch
+toggle_auto_git_fetch() {
+    if [ $auto_git_fetch -eq 0 ]; then
+        auto_git_fetch=1
+        echo "auto_git_fetch enabled"
+    else
+        auto_git_fetch=0
+        echo "auto_git_fetch disabled"
+    fi
+    sed -i "s/^auto_git_fetch=.*$/auto_git_fetch=${auto_git_fetch}/" ~/.bashrc
+    export auto_git_fetch
 }
 
 # these are functions that are not meant to be called from the terminal
@@ -311,7 +327,7 @@ get_cleaned_cwd() {
 
 # Function to check if git info printing is enabled
 is_git_info_enabled() {
-    [[ $git_info_enabled -eq 1 ]]
+    [ $git_info_enabled -eq 1 ]
 }
 
 # Determine whether this directory is a git repository
@@ -468,7 +484,7 @@ update_PS1() {
             output_PS1="${output_PS1} (${branch_info}${commit_info}${git_info})${suffix}"
         fi
         
-        if branch_has_changed; then
+        if [ "$auto_git_fetch" -eq 1 ] && branch_has_changed; then
             detect_remote_branch_changes
         fi
     else

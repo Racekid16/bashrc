@@ -15,6 +15,7 @@ The provided .bashrc file adds the following modifications and functionality to 
         - The number of commits is only shown if num_commits > 0.
         - The number of staged files and number of modified files is only shown if (num_staged_files > 0 || num_modified_files > 0).
     - You can choose whether or not to display git information by running **$ toggle_git_info**. I have it enabled.
-- Whenever you enter a new branch, $ git fetch is automatically run to determine if there are changes in the remote repository.
+- Whenever you enter a new branch, $ git fetch is automatically run to determine if there are changes in the associated remote repository if there is one. You'll be notified if there are any changes.
+    - The reason this isn't run every time is because $ git fetch is a slow operation. You can choose whether or not to enable this feature by running **$ toggle_auto_git_fetch**. I have it enabled. 
 
 ![Example of terminal modifications](terminal_example.png)
