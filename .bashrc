@@ -139,6 +139,10 @@ reset='\[\033[0m\]'
 # Store the original PS1- this is templated, not a static literal
 original_PS1="${PS1}"
 
+# Store the previous git branch you were on
+previous_branch=""
+previous_commit_hash=""
+
 # These are functions that are meant to be called from the terminal
 
 # Function to set the min_spaces variable directly from the terminal
@@ -166,7 +170,6 @@ toggle_git_info() {
     sed -i "s/^git_info_enabled=.*$/git_info_enabled=$git_info_enabled/" ~/.bashrc
     export git_info_enabled
 }
-
 
 # Function to toggle automatically activating virtual environments
 # usage: $ toggle_auto_env_activation
@@ -265,7 +268,7 @@ user_deactivate() {
     $deactivate_copy
     unalias deactivate
     echo "session_auto_env_activation disabled"
-    echo "to disable auto_env_activation beyond this session, run \$ toggle_auto_env_activation"
+    echo "To disable auto_env_activation beyond this session, run \$ toggle_auto_env_activation"
 }
 
 # Function to truncate the cwd part of PS1 if it's longer than min_spaces characters
@@ -317,8 +320,50 @@ is_git_repository() {
 }
 
 # Function to get the current git branch
-parse_git_branch() {
+get_current_git_branch() {
     echo "$(git branch --show-current 2>/dev/null)"
+}
+
+# gets the hash of the commit that the current branch is pointing to
+get_current_commit_hash() {
+    git rev-parse HEAD
+}
+
+# return true if the remote branch associated with this local branch has changed and false otherwise
+detect_remote_branch_changes() {
+    # Check if there is a remote repository associated with the local repository
+    if ! git remote -v | grep -q '^origin\s'; then
+        return
+    fi
+
+    local current_branch=$(get_current_git_branch)
+    local remote_branch=$(git for-each-ref --format='%(upstream:short)' refs/heads/"$current_branch")
+
+    local prev_remote_commit_hash=$(git rev-parse "$remote_branch")
+    git fetch
+    local remote_commit_hash=$(git rev-parse "$remote_branch")
+
+    if [ "$remote_commit_hash" != "$prev_remote_commit_hash" ]; then
+        echo
+        echo "Changes detected in the remote branch '$remote_branch'."
+        echo "To retrieve these changes, run $ git pull"
+    fi
+}
+
+# Function to check if the current branch is different than the previous branch
+branch_has_changed() {
+    local current_branch=$(get_current_git_branch)
+    local current_commit_hash=$(get_current_commit_hash)
+
+    if [ "$current_branch" != "$previous_branch" ] || [ "$current_commit_hash" != "$previous_commit_hash" ]; then
+        previous_branch=$current_branch
+        previous_commit_hash=$current_commit_hash
+        return 0
+    else
+        previous_branch=$current_branch
+        previous_commit_hash=$current_commit_hash
+        return 1
+    fi
 }
 
 # Function to count the number of commits away from the initial commit
@@ -386,40 +431,46 @@ update_PS1() {
     local cwd_length=${#cwd}
     PS1_length=$((PS1_length + cwd_length))
 
-    if is_git_repository && is_git_info_enabled; then
-        # gets the substring that appears before the last \$ in PS1
-        output_PS1=$(echo "$output_PS1" | sed -E 's/^(.*?)\\\$ .*/\1/') 
+    if is_git_repository; then
+        if is_git_info_enabled; then
+            # gets the substring that appears before the last \$ in PS1
+            output_PS1=$(echo "$output_PS1" | sed -E 's/^(.*?)\\\$ .*/\1/') 
 
-        local branch=$(parse_git_branch)
-        local num_commits=$(commit_count)
-        local staged_count=$(staged_files_count)
-        local modified_count=$(modified_files_count)
+            local branch=$(get_current_git_branch)
+            local num_commits=$(commit_count)
+            local staged_count=$(staged_files_count)
+            local modified_count=$(modified_files_count)
 
-        # Accounts for the extra space and opening and closing parenthesis
-        PS1_length=$((PS1_length + 3))
+            # Accounts for the extra space and opening and closing parenthesis
+            PS1_length=$((PS1_length + 3))
 
-        local branch_info="${yellow}${branch}${reset}"
-        PS1_length=$((PS1_length + ${#branch}))
+            local branch_info="${yellow}${branch}${reset}"
+            PS1_length=$((PS1_length + ${#branch}))
 
-        local commit_info=""
-        if [ "$num_commits" -gt 0 ]; then
-            commit_info=" ↑${yellow}${num_commits}${reset}"
-            # Accounts for ↑ and the space that directly precedes it too
-            PS1_length=$((PS1_length + ${#num_commits} + 2))
+            local commit_info=""
+            if [ "$num_commits" -gt 0 ]; then
+                commit_info=" ↑${yellow}${num_commits}${reset}"
+                # Accounts for ↑ and the space that directly precedes it too
+                PS1_length=$((PS1_length + ${#num_commits} + 2))
+            fi
+
+            local git_info=""
+            if [ "$staged_count" -gt 0 ] || [ "$modified_count" -gt 0 ]; then
+                git_info=" ${green}${staged_count}${reset}:${red}${modified_count}${reset}"
+                # Accounts for the : and the space that directly precedes the staged count too
+                PS1_length=$((PS1_length + ${#staged_count} + ${#modified_count} + 2))
+            fi
+
+            # the suffix is directly set to this instead of using the original suffix, 
+            # because using the original suffix causes issues with text in the terminal not line wrapping
+            local suffix="\\$ "
+
+            output_PS1="${output_PS1} (${branch_info}${commit_info}${git_info})${suffix}"
         fi
-
-        local git_info=""
-        if [ "$staged_count" -gt 0 ] || [ "$modified_count" -gt 0 ]; then
-            git_info=" ${green}${staged_count}${reset}:${red}${modified_count}${reset}"
-            # Accounts for the : and the space that directly precedes the staged count too
-            PS1_length=$((PS1_length + ${#staged_count} + ${#modified_count} + 2))
-        fi
-
-        # the suffix is directly set to this instead of using the original suffix, 
-        # because using the original suffix causes issues with text in the terminal not line wrapping
-        local suffix="\\$ "
-
-        output_PS1="${output_PS1} (${branch_info}${commit_info}${git_info})${suffix}"
+        detect_remote_branch_changes
+    else
+        previous_branch=""
+        previous_commit_hash=""
     fi
 
     # Accounting for the $ and the space after it
