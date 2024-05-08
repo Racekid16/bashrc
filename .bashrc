@@ -467,7 +467,10 @@ update_PS1() {
 
             output_PS1="${output_PS1} (${branch_info}${commit_info}${git_info})${suffix}"
         fi
-        detect_remote_branch_changes
+        
+        if branch_has_changed; then
+            detect_remote_branch_changes
+        fi
     else
         previous_branch=""
         previous_commit_hash=""
