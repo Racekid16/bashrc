@@ -325,11 +325,6 @@ get_cleaned_cwd() {
     echo "$cwd"
 }
 
-# Function to check if git info printing is enabled
-is_git_info_enabled() {
-    [ $git_info_enabled -eq 1 ]
-}
-
 # Determine whether this directory is a git repository
 is_git_repository() {
     git rev-parse --is-inside-work-tree &>/dev/null;
@@ -348,6 +343,7 @@ get_current_commit_hash() {
 # return true if the remote branch associated with this local branch has changed and false otherwise
 detect_remote_branch_changes() {
     # Check if there is a remote repository associated with the local repository
+    # and that there is at least one commit in this local branch
     if ! git remote -v | grep -q '^origin\s'; then
         return
     fi
@@ -448,12 +444,12 @@ update_PS1() {
     PS1_length=$((PS1_length + cwd_length))
 
     if is_git_repository; then
-        if is_git_info_enabled; then
+        local num_commits=$(commit_count)
+        if [ $git_info_enabled -eq 1 ]; then
             # gets the substring that appears before the last \$ in PS1
             output_PS1=$(echo "$output_PS1" | sed -E 's/^(.*?)\\\$ .*/\1/') 
 
             local branch=$(get_current_git_branch)
-            local num_commits=$(commit_count)
             local staged_count=$(staged_files_count)
             local modified_count=$(modified_files_count)
 
@@ -484,7 +480,7 @@ update_PS1() {
             output_PS1="${output_PS1} (${branch_info}${commit_info}${git_info})${suffix}"
         fi
         
-        if [ "$auto_git_fetch" -eq 1 ] && branch_has_changed; then
+        if [ "$auto_git_fetch" -eq 1 ] && [ "$num_commits" -gt 0 ] && branch_has_changed; then
             detect_remote_branch_changes
         fi
     else
