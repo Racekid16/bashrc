@@ -287,6 +287,14 @@ user_deactivate() {
     echo "To disable auto_env_activation beyond this session, run \$ toggle_auto_env_activation"
 }
 
+# Get the current working directory, but with the home diretory replaced with ~
+get_cleaned_cwd() {
+    local cwd=$(pwd)
+    local home_dir=$(eval echo "~")
+    cwd=${cwd//$home_dir/'~'}
+    echo "$cwd"
+}
+
 # Function to truncate the cwd part of PS1 if it's longer than min_spaces characters
 truncate_cwd() {
     local cwd="$1"
@@ -315,14 +323,6 @@ insert_truncated_cwd() {
     local output_PS1="$1"
     local truncated_cwd="$2"
     echo "${output_PS1//\\w/$truncated_cwd}"
-}
-
-# Get the current working directory, but with the home diretory replaced with ~
-get_cleaned_cwd() {
-    local cwd=$(pwd)
-    local home_dir=$(eval echo "~")
-    cwd=${cwd//$home_dir/'~'}
-    echo "$cwd"
 }
 
 # Determine whether this directory is a git repository
@@ -386,6 +386,10 @@ branch_has_changed() {
 # Function to count the number of commits away from the initial commit
 commit_count() {
     git rev-list --count HEAD 2>/dev/null || echo 0
+}
+
+merge_conflict_count() {
+    git status --porcelain | grep '^UU' | awk '{print $2}' | wc -l
 }
 
 # Function to count the number of staged files
@@ -455,6 +459,7 @@ update_PS1() {
             output_PS1=$(echo "$output_PS1" | sed -E 's/^(.*?)\\\$ .*/\1/') 
 
             local branch=$(get_current_git_branch)
+            local conflict_count=$(merge_conflict_count)
             local staged_count=$(staged_files_count)
             local modified_count=$(modified_files_count)
 
@@ -472,7 +477,9 @@ update_PS1() {
             fi
 
             local git_info=""
-            if [ "$staged_count" -gt 0 ] || [ "$modified_count" -gt 0 ]; then
+            if [ "$conflict_count" -gt 0 ]; then
+                git_info=" ${red}conflicts${reset}:${red}${conflict_count}${reset}"
+            elif [ "$staged_count" -gt 0 ] || [ "$modified_count" -gt 0 ]; then
                 git_info=" ${green}${staged_count}${reset}:${red}${modified_count}${reset}"
                 # Accounts for the : and the space that directly precedes the staged count too
                 PS1_length=$((PS1_length + ${#staged_count} + ${#modified_count} + 2))
