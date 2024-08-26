@@ -123,10 +123,8 @@ fi
 alias cdw='cd /mnt/c/Users/17508/Documents/VSCode_Projects'
 
 # variables that the user can manipulate via the provided interface
-min_spaces=20
+min_spaces=30
 git_info_enabled=1
-auto_env_activation=1
-session_auto_env_activation=1
 auto_git_fetch=1
 
 # Define colors
@@ -171,21 +169,6 @@ toggle_git_info() {
     fi
     sed -i "s/^git_info_enabled=.*$/git_info_enabled=${git_info_enabled}/" ~/.bashrc
     export git_info_enabled
-}
-
-# Function to toggle automatically activating virtual environments
-# usage: $ toggle_auto_env_activation
-toggle_auto_env_activation() {
-    if [ $auto_env_activation -eq 0 ]; then
-        auto_env_activation=1
-        session_auto_env_activation=1
-        echo "auto_env_activation enabled"
-    else
-        auto_env_activation=0
-        echo "auto_env_activation disabled"
-    fi
-    sed -i "s/^auto_env_activation=.*$/auto_env_activation=${auto_env_activation}/" ~/.bashrc
-    export auto_env_activation
 }
 
 # Function to toggle automatically running $ git fetch whenever entering a new branch
@@ -245,46 +228,6 @@ err_handler() {
     # Move cursor to the rightmost side of the terminal
     echo -en "\033[${spaces}C"
     echo -e "\033[31m${msg_1}\033[0m${msg_2}"
-}
-
-# Function to check if the env/ folder exists in the current or parent directories
-check_env_folder() {
-    local dir="$PWD"
-    local env_folders=("env" "venv" "venv3" ".venv")
-    while [ "$dir" != "/" ]; do
-        for folder in "${env_folders[@]}"; do
-            if [ -d "$dir/$folder" ]; then
-                return 0  # Virtual environment folder found
-            fi
-        done
-        dir=$(dirname "$dir")  # Move to the parent directory
-    done
-    return 1  # Virtual environment folder not found
-}
-
-# Function that gets the path to the env assuming there is one
-find_env_folder() {
-    local dir="$PWD"
-    local env_folders=("env" "venv" "venv3" ".venv")
-    while [ "$dir" != "/" ]; do
-        for folder in "${env_folders[@]}"; do
-            if [ -d "$dir/$folder" ]; then
-                echo "$dir/$folder"  # Echo the path to the virtual environment folder
-                return               # Stop the loop once the folder is found
-            fi
-        done
-        dir=$(dirname "$dir")  # Move to the parent directory
-    done
-}
-
-# Function for when a user manually deactivates the a virtual environment
-# (not run when this script runs deactivate)
-user_deactivate() {
-    session_auto_env_activation=0
-    $deactivate_copy
-    unalias deactivate
-    echo "session_auto_env_activation disabled"
-    echo "To disable auto_env_activation beyond this session, run \$ toggle_auto_env_activation"
 }
 
 # Get the current working directory, but with the home diretory replaced with ~
@@ -406,26 +349,6 @@ modified_files_count() {
 update_PS1() {
     local output_PS1="${original_PS1}"
     local PS1_length=0
-
-    # Automatically activate or deactivate virtual environment
-    if check_env_folder; then
-        if [ -z "$VIRTUAL_ENV" ] && [ "$auto_env_activation" = 1 ] && [ "$session_auto_env_activation" = 1 ]; then
-            # Activate the virtual environment
-            env_path=$(find_env_folder)
-            source "${env_path}/bin/activate"
-            deactivate_copy=$(type deactivate | sed '1d')
-            alias deactivate='user_deactivate'
-        fi
-    else
-        if [ -n "$VIRTUAL_ENV" ]; then
-            # for some reason, even if deactivate is alias'd, it'll use
-            # the virtual environment's deactivate
-            deactivate
-            if [[ $(type -t deactivate) == "alias" ]]; then
-                unalias deactivate
-            fi
-        fi
-    fi
 
     # because I changed the PS1, virtual environment activate scripts would no longer add the (env)
     # so this adds it manually
